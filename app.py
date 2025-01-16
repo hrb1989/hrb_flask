@@ -1,5 +1,11 @@
-from flask import Flask
+from flask import Flask, render_template, request, redirect, url_for
 from markupsafe import escape
+import sqlite3
+
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 app = Flask(__name__)
 
@@ -30,3 +36,22 @@ def urlpatter(urlPath):
 @app.route("/random/<uuid:id>") # path params <id> is UUID
 def value(id):
     return f"<p>New UUID is, {id}!</P>"
+
+@app.route('/html')
+def html():
+    conn = get_db_connection()
+    users = conn.execute('select * from user').fetchall()
+    conn.close()
+    return render_template("test.html", users=users)
+
+@app.route('/create', methods=['GET', 'POST'])
+def create():
+    if request.method == 'POST':
+        name = request.form['name']
+        conn = get_db_connection()
+        conn.execute(f'insert into user (name) values (?)',
+                     (name,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('html'))
+    return render_template('create.html')
